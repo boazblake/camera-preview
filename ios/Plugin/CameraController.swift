@@ -184,11 +184,14 @@ extension CameraController {
         target.addGestureRecognizer(pinchGesture)
     }
 
-    func updateVideoOrientation() {
-        assert(Thread.isMainThread) // UIApplication.statusBarOrientation requires the main thread.
-
+     func updateVideoOrientation() {
+        guard let connection = previewLayer?.connection else { return }
+    
+        // Default to portrait if no orientation is found
         let videoOrientation: AVCaptureVideoOrientation
-        switch UIApplication.shared.statusBarOrientation {
+    
+        // Handle the orientation of the camera
+        switch UIDevice.current.orientation {
         case .portrait:
             videoOrientation = .portrait
         case .landscapeLeft:
@@ -199,11 +202,17 @@ extension CameraController {
             videoOrientation = .portraitUpsideDown
         case .unknown:
             fallthrough
-        @unknown default:
+        case .faceUp:
+            fallthrough
+        case .faceDown:
+            // For faceUp and faceDown, we fall back to portrait (this could be customized based on your needs)
             videoOrientation = .portrait
         }
-
-        previewLayer?.connection?.videoOrientation = videoOrientation
+    
+        // Apply the orientation to the preview layer connection
+        connection.videoOrientation = videoOrientation
+    
+        // Apply the orientation to data and photo output connections
         dataOutput?.connections.forEach { $0.videoOrientation = videoOrientation }
         photoOutput?.connections.forEach { $0.videoOrientation = videoOrientation }
     }
@@ -255,6 +264,7 @@ extension CameraController {
             try switchToFrontCamera()
         }
 
+        updateVideoOrientation()
         captureSession.commitConfiguration()
     }
 
